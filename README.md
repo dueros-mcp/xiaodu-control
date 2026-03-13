@@ -7,7 +7,7 @@
 - 设备发现与解析
 - 文本播报、语音指令、拍照、资源推送
 - IoT 家电控制与场景触发
-- IoT token 刷新
+- 小度 MCP 平台 token 刷新
 
 这个仓库是 skill 的源码仓库；实际给 OpenClaw 使用的入口文件是 [SKILL.md](./SKILL.md)。
 
@@ -47,7 +47,32 @@ clawhub install xiaodu-control
 
 如果你是开发者或维护者，直接克隆本仓库即可。
 
-### 2. 配置 MCP
+### 2. 先在平台创建应用并做调试授权
+
+第一次接入时，先去小度 MCP 控制台：
+
+- [`https://dueros.baidu.com/dbp/mcp/console`](https://dueros.baidu.com/dbp/mcp/console)
+
+在控制台里：
+
+1. 创建应用
+2. 进入应用详情页
+3. 点击“调试授权”
+4. 拿到：
+   - `ACCESS_TOKEN`
+   - `AppKey`
+   - `SecretKey`
+   - `refresh_token`
+
+如果你接的是当前这套小度智能终端 MCP，智能屏 MCP 地址通常直接填：
+
+```text
+https://xiaodu.baidu.com/dueros_mcp_server/mcp/
+```
+
+如果控制台明确显示了其他地址，优先用平台显示值。
+
+### 3. 配置 MCP
 
 先按模板填写：
 
@@ -66,13 +91,22 @@ clawhub install xiaodu-control
 - `~/.mcporter/xiaodu-mcp-oauth.json`
   - 这是这套 skill 默认使用的“小度 MCP 平台 OAuth 凭据文件”路径。
   - 它不是平台强制名称，也不是 `mcporter` 固定要求的名字；默认是刷新脚本在读取它。
-  - 如果你想放在别处，也可以，只要执行刷新脚本或安装自动任务时通过 `--config` 指到真实路径。
+  - 如果你想放在别处，也可以，只要执行刷新脚本时通过 `--config` 指到真实路径，或设置环境变量 `XIAODU_MCP_OAUTH_CONFIG=/实际路径`。
+
+另外，OAuth 文件里的 `mcporter_config` 字段才决定“刷新后把 token 回写到哪一个 mcporter.json”。如果你的 `mcporter` 也用了自定义路径，这里要填成你的真实路径。
+
+刷新脚本对 OAuth 凭据文件本身的默认行为是：
+
+- 默认回写 `~/.mcporter/xiaodu-mcp-oauth.json`
+- 如果新文件不存在但旧文件 `~/.mcporter/xiaodu-iot-oauth.json` 还在，会回退并写回旧文件
+- 如果新旧两个默认文件都存在，会把另一份也同步，避免内容分叉
+- 如果你用 `--config` 或 `XIAODU_MCP_OAUTH_CONFIG` 指了自定义路径，脚本会以你指定的那份文件为主进行回写
 
 详细步骤见：
 
 - [`references/install-for-users.md`](./references/install-for-users.md)
 
-### 3. 验证本地链路
+### 4. 验证本地链路
 
 ```bash
 mcporter list xiaodu --schema
@@ -82,7 +116,7 @@ mcporter list xiaodu-iot --schema
 mcporter call xiaodu-iot.GET_ALL_DEVICES_WITH_STATUS --output json
 ```
 
-### 4. 在 OpenClaw 中使用
+### 5. 在 OpenClaw 中使用
 
 第一次使用，建议显式带上 skill 名：
 

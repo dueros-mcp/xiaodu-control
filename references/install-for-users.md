@@ -1,11 +1,11 @@
-# 给其他用户的安装指南
+# 用户的安装指南
 
 这份文档就是这套 skill 的唯一安装文档。目标是让每个安装者在自己的 OpenClaw 环境里独立完成配置、验证和自动刷新。
 
 ## 适用场景
 
 - 你在自己的电脑上安装了 OpenClaw
-- 你想把 `xiaodu-control` 用在自己的 OpenClaw / Codex 会话里
+- 你想把 `xiaodu-control` 用在自己的 OpenClaw 会话里
 - 你不会复用别人机器上的 `mcporter` 配置
 
 ## 你需要准备的东西
@@ -26,13 +26,57 @@
 
 整个安装流程可以压成 5 步：
 
-1. 从小度平台拿到智能屏 MCP 地址，以及 IoT 的 OAuth 信息
+1. 先到小度 MCP 控制台创建应用，并完成调试授权
 2. 按模板填写 `~/.mcporter/mcporter.json`
 3. 按模板填写 `~/.mcporter/xiaodu-mcp-oauth.json`
 4. 用 `mcporter list` / `mcporter call` 验证本地 MCP 已跑通
 5. 需要长期使用时，再安装自动刷新
 
 通常情况下，`xiaodu` 和 `xiaodu-iot` 可以复用同一个小度 MCP 平台 `ACCESS_TOKEN`。这份文档和模板默认按“同一个 token 同时写入两个 server”处理；只有当你明确拿到了两套不同 token，才需要手动改成分别维护。
+
+## 第零步：先在平台创建应用并完成调试授权
+
+第一次接入时，不要先改本地文件，先去平台把信息拿齐。
+
+### 入口
+
+- 小度 MCP 控制台：[`https://dueros.baidu.com/dbp/mcp/console`](https://dueros.baidu.com/dbp/mcp/console)
+
+### 你需要在平台做的事
+
+1. 登录控制台
+2. 创建你自己的小度 MCP 应用
+3. 打开应用详情页
+4. 点击“调试授权”
+5. 记录下面这些信息
+
+### 你要从平台拿到什么
+
+- 平台 `ACCESS_TOKEN`
+- `AppKey`
+- `SecretKey`
+- `refresh_token`
+- 智能屏 MCP 地址
+
+### 关于智能屏 MCP 地址
+
+如果你接的是当前这套小度智能终端 MCP，实际接入时通常使用：
+
+```text
+https://xiaodu.baidu.com/dueros_mcp_server/mcp/
+```
+
+这是基于当前平台接入和现有实测整理出的常用地址。  
+如果你在控制台或官方说明里看到了平台明确给出的地址，优先以平台显示为准。
+
+### 调试授权拿到的值怎么用
+
+- `ACCESS_TOKEN`
+  - 直接写进 `mcporter.json`
+  - 默认同时给 `xiaodu` 和 `xiaodu-iot` 用
+- `AppKey / SecretKey / refresh_token`
+  - 写进 `xiaodu-mcp-oauth.json`
+  - 供后续刷新 token 使用
 
 ## 第一步：安装 mcporter
 
@@ -116,7 +160,19 @@ mcporter config add xiaodu-iot \
   --persist ~/.mcporter/mcporter.json
 ```
 
-## 第三步：创建 IoT OAuth 凭据文件
+## 第三步：创建小度 MCP 平台 OAuth 刷新凭据文件
+
+这一步不是在配置“只给 `xiaodu-iot` 用的一套 OAuth”。
+
+这里配置的是：
+
+- 用来刷新小度 MCP 平台 `ACCESS_TOKEN` 的 OAuth 凭据
+- 刷新成功后，要把新 token 回写到哪些 MCP server 配置里
+
+默认模板会把同一个平台 token 同时回写到：
+
+- `xiaodu`
+- `xiaodu-iot`
 
 建议直接以这个模板为起点：
 
@@ -157,7 +213,15 @@ mcporter config add xiaodu-iot \
 
 - `~/.mcporter/mcporter.json` 是 `mcporter` 的系统配置默认路径，`mcporter` 自己会读它
 - `~/.mcporter/xiaodu-mcp-oauth.json` 不是平台强制文件名，而是这套 skill 默认给刷新脚本使用的凭据文件路径
-- 如果你想把凭据文件放在别处，可以，只要后续执行刷新脚本或安装自动任务时把 `--config` 指到你的真实路径
+- 如果你想把凭据文件放在别处，可以，只要后续执行刷新脚本时把 `--config` 指到你的真实路径，或者设置 `XIAODU_MCP_OAUTH_CONFIG=/实际路径`
+- OAuth 文件里的 `mcporter_config` 字段，决定了刷新后要回写哪一个 `mcporter.json`；如果你把 `mcporter` 配在别处，这里必须改成真实路径
+
+刷新脚本对 OAuth 凭据文件的写回规则也要说明白：
+
+- 默认情况下，脚本会把新的 `refresh_token`、`current_access_token`、`last_refresh` 等字段回写到 `~/.mcporter/xiaodu-mcp-oauth.json`
+- 如果默认新文件不存在，但旧文件 `~/.mcporter/xiaodu-iot-oauth.json` 存在，脚本会回退到旧文件，并把更新结果写回旧文件
+- 如果新旧两个默认文件都存在，脚本会更新当前实际使用的那一份，并把另一份同步成相同内容，避免新旧文件分叉
+- 如果你通过 `--config /实际路径` 或 `XIAODU_MCP_OAUTH_CONFIG=/实际路径` 使用了自定义 OAuth 文件路径，脚本会回写你指定的那份文件；只有在默认新旧文件也存在时，才会顺手同步默认兼容文件
 
 建议权限：
 
@@ -206,6 +270,21 @@ mcporter call xiaodu-iot.GET_ALL_DEVICES_WITH_STATUS --output json
 这个 skill 不再内置某个平台专属的自动安装脚本。推荐做法是：在你自己的调度器里，每天执行一次刷新命令。
 
 ```bash
+bash ~/.openclaw/skills/xiaodu-control/scripts/refresh_xiaodu_mcp_token.sh --refresh-if-within-days 7
+```
+
+如果你的 OAuth 凭据文件不在默认路径，也可以这样跑：
+
+```bash
+bash ~/.openclaw/skills/xiaodu-control/scripts/refresh_xiaodu_mcp_token.sh \
+  --config /path/to/xiaodu-mcp-oauth.json \
+  --refresh-if-within-days 7
+```
+
+或者：
+
+```bash
+XIAODU_MCP_OAUTH_CONFIG=/path/to/xiaodu-mcp-oauth.json \
 bash ~/.openclaw/skills/xiaodu-control/scripts/refresh_xiaodu_mcp_token.sh --refresh-if-within-days 7
 ```
 

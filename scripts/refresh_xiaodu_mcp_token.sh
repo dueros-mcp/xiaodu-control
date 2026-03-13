@@ -11,10 +11,11 @@ usage() {
   refresh_xiaodu_mcp_token.sh --refresh-if-within-days 7
   refresh_xiaodu_mcp_token.sh --force
   refresh_xiaodu_mcp_token.sh --config ~/.mcporter/xiaodu-mcp-oauth.json
+  XIAODU_MCP_OAUTH_CONFIG=/path/to/xiaodu-mcp-oauth.json refresh_xiaodu_mcp_token.sh
 EOF
 }
 
-CONFIG="$HOME/.mcporter/xiaodu-mcp-oauth.json"
+CONFIG="${XIAODU_MCP_OAUTH_CONFIG:-$HOME/.mcporter/xiaodu-mcp-oauth.json}"
 REFRESH_IF_WITHIN_DAYS=""
 FORCE=0
 

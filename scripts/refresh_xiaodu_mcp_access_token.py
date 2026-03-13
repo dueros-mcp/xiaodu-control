@@ -13,6 +13,7 @@ from urllib.request import Request, urlopen
 
 DEFAULT_CONFIG = "~/.mcporter/xiaodu-mcp-oauth.json"
 LEGACY_CONFIG = "~/.mcporter/xiaodu-iot-oauth.json"
+CONFIG_ENV = "XIAODU_MCP_OAUTH_CONFIG"
 
 
 def resolve_path(raw: str) -> Path:
@@ -20,8 +21,15 @@ def resolve_path(raw: str) -> Path:
 
 
 def resolve_default_config_path(raw: str) -> Path:
+    if raw != DEFAULT_CONFIG:
+        return resolve_path(raw)
+
+    env_raw = os.environ.get(CONFIG_ENV)
+    if env_raw:
+        return resolve_path(env_raw)
+
     path = resolve_path(raw)
-    if raw != DEFAULT_CONFIG or path.exists():
+    if path.exists():
         return path
 
     legacy_path = resolve_path(LEGACY_CONFIG)
