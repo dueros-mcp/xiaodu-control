@@ -7,6 +7,11 @@
   "mcporter_config": "~/.mcporter/mcporter.json",
   "targets": [
     {
+      "server": "xiaodu",
+      "container": "headers",
+      "key": "ACCESS_TOKEN"
+    },
+    {
       "server": "xiaodu-iot",
       "container": "env",
       "key": "ACCESS_TOKEN"

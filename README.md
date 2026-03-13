@@ -21,7 +21,7 @@
 - 给智能屏推送图片、图片+背景音、视频、音频
 - 通过 `xiaodu-iot` 控制灯、空调、窗帘、电视等 IoT 设备
 - 获取 IoT 设备状态、场景列表并触发场景
-- 刷新百度 OAuth token，并回写 `mcporter` 配置
+- 刷新小度 MCP 平台 OAuth token，并回写 `mcporter` 配置
 
 ## 适用前提
 
@@ -30,8 +30,10 @@
 - 已安装 OpenClaw
 - 已安装 `mcporter`
 - 已从小度平台拿到真实的智能屏 MCP 地址
-- 已具备 `xiaodu-iot` 的 `ACCESS_TOKEN`
+- 已具备一个可用的小度 MCP 平台 `ACCESS_TOKEN`
 - 如果要长期使用 IoT，还需要 `AppKey`、`SecretKey`、`refresh_token`
+
+通常情况下，`xiaodu` 和 `xiaodu-iot` 可以复用同一个小度 MCP 平台 `ACCESS_TOKEN`。本仓库里的模板和刷新逻辑默认会把同一个 token 同时写入这两个 server。
 
 ## 快速开始
 
@@ -50,12 +52,21 @@ clawhub install xiaodu-control
 先按模板填写：
 
 - [`references/mcporter.template.json`](./references/mcporter.template.json)
-- [`references/xiaodu-iot-oauth.template.json`](./references/xiaodu-iot-oauth.template.json)
+- [`references/xiaodu-mcp-oauth.template.json`](./references/xiaodu-mcp-oauth.template.json)
 
 默认配置路径：
 
 - `~/.mcporter/mcporter.json`
-- `~/.mcporter/xiaodu-iot-oauth.json`
+- `~/.mcporter/xiaodu-mcp-oauth.json`
+
+这里要分清谁在读哪个文件：
+
+- `~/.mcporter/mcporter.json`
+  - 这是 `mcporter` 的系统配置默认路径，`mcporter list/call/auth` 会直接读取它。
+- `~/.mcporter/xiaodu-mcp-oauth.json`
+  - 这是这套 skill 默认使用的“小度 MCP 平台 OAuth 凭据文件”路径。
+  - 它不是平台强制名称，也不是 `mcporter` 固定要求的名字；默认是刷新脚本在读取它。
+  - 如果你想放在别处，也可以，只要执行刷新脚本或安装自动任务时通过 `--config` 指到真实路径。
 
 详细步骤见：
 
@@ -105,7 +116,7 @@ IoT 控制建议把链路说清楚：
 - `bash scripts/list_iot_devices.sh`
 - `bash scripts/list_scenes.sh`
 - `bash scripts/trigger_scene.sh`
-- `bash scripts/refresh_iot_token.sh`
+- `bash scripts/refresh_xiaodu_mcp_token.sh`
 
 精确命令示例见：
 
@@ -125,7 +136,7 @@ xiaodu-control/
 │   ├── test-cases.md
 │   ├── troubleshooting.md
 │   ├── mcporter.template.json
-│   └── xiaodu-iot-oauth.template.json
+│   └── xiaodu-mcp-oauth.template.json
 └── scripts/
     ├── *.sh
     └── *.py
@@ -154,4 +165,3 @@ xiaodu-control/
 - 不要把真实的 `ACCESS_TOKEN`、`AppKey`、`SecretKey`、`refresh_token` 提交到仓库
 - 不要把本机私有路径、账号信息、测试截图、缓存文件一起发布
 - 自动刷新只应写回用户本机自己的 `~/.mcporter/` 配置
-

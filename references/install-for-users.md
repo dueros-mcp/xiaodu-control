@@ -28,9 +28,11 @@
 
 1. 从小度平台拿到智能屏 MCP 地址，以及 IoT 的 OAuth 信息
 2. 按模板填写 `~/.mcporter/mcporter.json`
-3. 按模板填写 `~/.mcporter/xiaodu-iot-oauth.json`
+3. 按模板填写 `~/.mcporter/xiaodu-mcp-oauth.json`
 4. 用 `mcporter list` / `mcporter call` 验证本地 MCP 已跑通
 5. 需要长期使用时，再安装自动刷新
+
+通常情况下，`xiaodu` 和 `xiaodu-iot` 可以复用同一个小度 MCP 平台 `ACCESS_TOKEN`。这份文档和模板默认按“同一个 token 同时写入两个 server”处理；只有当你明确拿到了两套不同 token，才需要手动改成分别维护。
 
 ## 第一步：安装 mcporter
 
@@ -75,7 +77,7 @@ mcporter config list
     "xiaodu": {
       "baseUrl": "https://替换成你的智能屏MCP地址",
       "headers": {
-        "ACCESS_TOKEN": "替换成你的智能屏ACCESS_TOKEN"
+        "ACCESS_TOKEN": "替换成你的小度MCP平台ACCESS_TOKEN"
       }
     },
     "xiaodu-iot": {
@@ -85,7 +87,7 @@ mcporter config list
         "dueros-iot-mcp"
       ],
       "env": {
-        "ACCESS_TOKEN": "替换成你的IoT ACCESS_TOKEN"
+        "ACCESS_TOKEN": "替换成你的小度MCP平台ACCESS_TOKEN"
       }
     }
   }
@@ -103,14 +105,14 @@ mcporter config list
 ```bash
 mcporter config add xiaodu \
   --url "https://替换成你的智能屏MCP地址" \
-  --header "ACCESS_TOKEN=替换成你的智能屏ACCESS_TOKEN" \
+  --header "ACCESS_TOKEN=替换成你的小度MCP平台ACCESS_TOKEN" \
   --persist ~/.mcporter/mcporter.json
 
 mcporter config add xiaodu-iot \
   --command npx \
   --arg -y \
   --arg dueros-iot-mcp \
-  --env "ACCESS_TOKEN=替换成你的IoT ACCESS_TOKEN" \
+  --env "ACCESS_TOKEN=替换成你的小度MCP平台ACCESS_TOKEN" \
   --persist ~/.mcporter/mcporter.json
 ```
 
@@ -118,7 +120,7 @@ mcporter config add xiaodu-iot \
 
 建议直接以这个模板为起点：
 
-[`xiaodu-iot-oauth.template.json`](xiaodu-iot-oauth.template.json)
+[`xiaodu-mcp-oauth.template.json`](xiaodu-mcp-oauth.template.json)
 
 最小示例：
 
@@ -132,6 +134,11 @@ mcporter config add xiaodu-iot \
   "mcporter_config": "~/.mcporter/mcporter.json",
   "targets": [
     {
+      "server": "xiaodu",
+      "container": "headers",
+      "key": "ACCESS_TOKEN"
+    },
+    {
       "server": "xiaodu-iot",
       "container": "env",
       "key": "ACCESS_TOKEN"
@@ -140,16 +147,22 @@ mcporter config add xiaodu-iot \
 }
 ```
 
-保存到：
+默认保存到：
 
 ```text
-~/.mcporter/xiaodu-iot-oauth.json
+~/.mcporter/xiaodu-mcp-oauth.json
 ```
+
+这里有个关键点：
+
+- `~/.mcporter/mcporter.json` 是 `mcporter` 的系统配置默认路径，`mcporter` 自己会读它
+- `~/.mcporter/xiaodu-mcp-oauth.json` 不是平台强制文件名，而是这套 skill 默认给刷新脚本使用的凭据文件路径
+- 如果你想把凭据文件放在别处，可以，只要后续执行刷新脚本或安装自动任务时把 `--config` 指到你的真实路径
 
 建议权限：
 
 ```bash
-chmod 600 ~/.mcporter/mcporter.json ~/.mcporter/xiaodu-iot-oauth.json
+chmod 600 ~/.mcporter/mcporter.json ~/.mcporter/xiaodu-mcp-oauth.json
 ```
 
 这里有一个很重要的边界：
@@ -158,6 +171,13 @@ chmod 600 ~/.mcporter/mcporter.json ~/.mcporter/xiaodu-iot-oauth.json
 - 但 `AppKey / SecretKey / refresh_token / ACCESS_TOKEN` 不能跟 skill 一起公开分发
 
 每个安装者都必须在自己的机器上填写自己的值。
+
+默认模板会在刷新 token 时同时回写：
+
+- `mcpServers.xiaodu.headers.ACCESS_TOKEN`
+- `mcpServers.xiaodu-iot.env.ACCESS_TOKEN`
+
+如果你的部署确实要求两套不同 token，可以修改 `targets`，只保留你想自动回写的那一边。
 
 ## 第四步：验证配置
 
@@ -175,7 +195,7 @@ mcporter list xiaodu-iot --schema
 mcporter call xiaodu-iot.GET_ALL_DEVICES_WITH_STATUS --output json
 ```
 
-## 第五步：安装自动刷新
+## 第五步：接入自动刷新
 
 先明确原则：
 
@@ -183,36 +203,32 @@ mcporter call xiaodu-iot.GET_ALL_DEVICES_WITH_STATUS --output json
 - 如果你们多人共用同一个 OpenClaw / Gateway 主机，只需要那台主机装一次自动刷新
 - 如果每个人都各自安装 OpenClaw，就每个人各自装自己的自动刷新
 
-### macOS
+这个 skill 不再内置某个平台专属的自动安装脚本。推荐做法是：在你自己的调度器里，每天执行一次刷新命令。
 
 ```bash
-cd ~/.openclaw/skills/xiaodu-control
-bash ./scripts/install_iot_refresh_launchd.sh --refresh-if-within-days 7
+bash ~/.openclaw/skills/xiaodu-control/scripts/refresh_xiaodu_mcp_token.sh --refresh-if-within-days 7
 ```
 
 ### Linux
 
-本 skill 目前没有直接提供 `systemd` 或 `cron` 安装脚本。最简单的方式是每天执行一次：
-
-```bash
-bash ~/.openclaw/skills/xiaodu-control/scripts/refresh_iot_token.sh --refresh-if-within-days 7
-```
-
-可以把这条命令接到你自己的 `cron` 或 `systemd timer`。
+可以把上面的命令接到你的 `cron` 或 `systemd timer`。
 
 ### Windows
 
-当前没有直接提供 Task Scheduler 安装脚本。建议把下面这条命令接到计划任务：
+建议把下面这条命令接到计划任务：
 
 ```text
-python %USERPROFILE%\.openclaw\skills\xiaodu-control\scripts\refresh_baidu_access_token.py --config %USERPROFILE%\.mcporter\xiaodu-iot-oauth.json --refresh-if-within-days 7
+python %USERPROFILE%\.openclaw\skills\xiaodu-control\scripts\refresh_xiaodu_mcp_access_token.py --config %USERPROFILE%\.mcporter\xiaodu-mcp-oauth.json --refresh-if-within-days 7
 ```
 
 ## 第六步：刷新后的验证
 
-每次自动刷新或手动刷新后，都可以用这两条验证：
+每次自动刷新或手动刷新后，都可以用这几条验证：
 
 ```bash
+mcporter list xiaodu --schema
+mcporter call xiaodu.list_user_devices --output json
+
 mcporter list xiaodu-iot --schema
 mcporter call xiaodu-iot.GET_ALL_DEVICES_WITH_STATUS --output json
 ```
@@ -221,6 +237,8 @@ mcporter call xiaodu-iot.GET_ALL_DEVICES_WITH_STATUS --output json
 
 - `xiaodu` 智能屏 MCP 走 HTTP MCP
 - `xiaodu-iot` 走官方 `dueros-iot-mcp` 的 stdio server
+- 两个 server 虽然配置形式不同，但通常可以复用同一个小度 MCP 平台 `ACCESS_TOKEN`
+- 这套 skill 默认用 `~/.mcporter/xiaodu-mcp-oauth.json` 存放刷新凭据，但这只是默认值，不是平台强制名称
 - 如果 `npx -y dueros-iot-mcp` 首次启动很慢，先耐心等一次；如果握手仍然超时，再看 [`troubleshooting.md`](troubleshooting.md)
 - 如果 `refresh_token` 成功刷新过一次，必须保存新返回的 `refresh_token`
 - 不要把 `AppKey / SecretKey / refresh_token` 跟 skill 一起公开分发

@@ -11,8 +11,25 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 
+DEFAULT_CONFIG = "~/.mcporter/xiaodu-mcp-oauth.json"
+LEGACY_CONFIG = "~/.mcporter/xiaodu-iot-oauth.json"
+
+
 def resolve_path(raw: str) -> Path:
     return Path(os.path.expanduser(raw)).resolve()
+
+
+def resolve_default_config_path(raw: str) -> Path:
+    path = resolve_path(raw)
+    if raw != DEFAULT_CONFIG or path.exists():
+        return path
+
+    legacy_path = resolve_path(LEGACY_CONFIG)
+    if legacy_path.exists():
+        print(f"[xiaodu-control] 未找到默认凭据文件，回退到旧路径: {legacy_path}")
+        return legacy_path
+
+    return path
 
 
 def load_json(path: Path):
@@ -143,11 +160,33 @@ def update_credentials_file(path: Path, config: dict, token_payload: dict):
         pass
 
 
+def mirror_compat_credentials_file(active_path: Path, config: dict):
+    default_path = resolve_path(DEFAULT_CONFIG)
+    legacy_path = resolve_path(LEGACY_CONFIG)
+
+    candidates = []
+    if active_path == default_path and legacy_path.exists():
+        candidates.append(legacy_path)
+    if active_path == legacy_path and default_path.exists():
+        candidates.append(default_path)
+
+    mirrored = []
+    for path in candidates:
+        atomic_write_json(path, config)
+        try:
+            os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
+        except OSError:
+            pass
+        mirrored.append(path)
+
+    return mirrored
+
+
 def main():
-    parser = argparse.ArgumentParser(description="刷新百度 OAuth ACCESS_TOKEN 并回写 mcporter 配置")
+    parser = argparse.ArgumentParser(description="刷新小度 MCP 平台 ACCESS_TOKEN 并回写 mcporter 配置")
     parser.add_argument(
         "--config",
-        default="~/.mcporter/xiaodu-iot-oauth.json",
+        default=DEFAULT_CONFIG,
         help="凭据配置文件路径",
     )
     parser.add_argument(
@@ -163,7 +202,7 @@ def main():
     )
     args = parser.parse_args()
 
-    config_path = resolve_path(args.config)
+    config_path = resolve_default_config_path(args.config)
     if not config_path.exists():
         raise SystemExit(f"未找到凭据配置文件: {config_path}")
 
@@ -181,12 +220,15 @@ def main():
 
     mcporter_path, updated_paths = update_mcporter_config(config, access_token)
     update_credentials_file(config_path, config, token_payload)
+    mirrored_paths = mirror_compat_credentials_file(config_path, config)
 
     print(f"[xiaodu-control] 已更新 mcporter 配置: {mcporter_path}")
     print("[xiaodu-control] 已回写字段:")
     for item in updated_paths:
         print(f"  - {item}")
     print(f"[xiaodu-control] 已更新凭据文件: {config_path}")
+    for path in mirrored_paths:
+        print(f"[xiaodu-control] 已同步兼容凭据文件: {path}")
 
 
 if __name__ == "__main__":

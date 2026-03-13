@@ -4,17 +4,17 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 用法:
-  refresh_iot_token.sh [--config 凭据文件] [--refresh-if-within-days 天数] [--force]
+  refresh_xiaodu_mcp_token.sh [--config 凭据文件] [--refresh-if-within-days 天数] [--force]
 
 示例:
-  refresh_iot_token.sh
-  refresh_iot_token.sh --refresh-if-within-days 7
-  refresh_iot_token.sh --force
-  refresh_iot_token.sh --config ~/.mcporter/xiaodu-iot-oauth.json
+  refresh_xiaodu_mcp_token.sh
+  refresh_xiaodu_mcp_token.sh --refresh-if-within-days 7
+  refresh_xiaodu_mcp_token.sh --force
+  refresh_xiaodu_mcp_token.sh --config ~/.mcporter/xiaodu-mcp-oauth.json
 EOF
 }
 
-CONFIG="$HOME/.mcporter/xiaodu-iot-oauth.json"
+CONFIG="$HOME/.mcporter/xiaodu-mcp-oauth.json"
 REFRESH_IF_WITHIN_DAYS=""
 FORCE=0
 
@@ -52,4 +52,4 @@ if [[ "$FORCE" -eq 1 ]]; then
   ARGS+=(--force)
 fi
 
-python3 "$(dirname "$0")/refresh_baidu_access_token.py" "${ARGS[@]}"
+python3 "$(dirname "$0")/refresh_xiaodu_mcp_access_token.py" "${ARGS[@]}"
