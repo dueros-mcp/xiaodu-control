@@ -1,7 +1,7 @@
 ---
 name: xiaodu-control
-description: 当用户要连接、验证、排障或控制小度智能屏 MCP 与小度 IoT MCP 时使用，包括配置 mcporter、列设备、文本播报、语音指令、拍照、资源推送、IoT 家电控制、场景触发与平台 token 刷新。
-metadata: {"openclaw":{"emoji":"📺","homepage":"https://github.com/dueros-mcp/xiaodu-control","requires":{"bins":["mcporter","python3","bash"]}}}
+description: 当用户要连接、验证、排障或控制小度智能屏 MCP 与小度 IoT MCP 时使用，包括配置 mcporter、列设备、文本播报、语音指令、拍照、资源推送、IoT 家电控制与场景触发。
+metadata: {"openclaw":{"emoji":"📺","homepage":"https://github.com/dueros-mcp/xiaodu-control","requires":{"bins":["mcporter","python3","bash","npx"]}}}
 ---
 
 # xiaodu-control
@@ -10,13 +10,10 @@ metadata: {"openclaw":{"emoji":"📺","homepage":"https://github.com/dueros-mcp/
 
 ## 使用前确认
 
-- 这套 skill 依赖 `mcporter`、`python3` 和 `bash`。
-- 这套 skill 需要小度平台相关凭据：`ACCESS_TOKEN`，以及用于长期刷新的 `AppKey / SecretKey / refresh_token`。
-- 默认会读取并可能回写：
-  - `~/.mcporter/mcporter.json`
-  - `~/.mcporter/xiaodu-mcp-oauth.json`
-- `scripts/refresh_xiaodu_mcp_token.sh` 会向百度 OAuth endpoint 发起网络请求，并更新 `mcporter` 配置里的 token。
-- 如果你不希望修改默认全局配置，请改用自定义 OAuth 文件路径，并在其中把 `mcporter_config` 指向你自己的配置文件。
+- 这套 skill 依赖 `mcporter`、`python3`、`bash` 和 `npx`。
+- 这套 skill 需要一个已经可用的小度 MCP 平台 `ACCESS_TOKEN`。
+- 默认读取 `~/.mcporter/mcporter.json`，并假设其中已经配置好了 `xiaodu` 和 `xiaodu-iot`。
+- 这套公开 skill 不负责 token 刷新，也不负责维护 OAuth 凭据文件；token 生命周期应由平台侧或部署方在 skill 之外处理。
 
 ## 快速规则
 
@@ -34,7 +31,6 @@ metadata: {"openclaw":{"emoji":"📺","homepage":"https://github.com/dueros-mcp/
 1. 先确认前提：
    - 已安装 `mcporter`
    - 已拿到平台 `ACCESS_TOKEN`
-   - 如果需要长期刷新，还要拿到 `AppKey / SecretKey / refresh_token`
 2. 先探测，再持久化配置：
    - 智能屏：`bash scripts/probe_xiaodu.sh --url "https://real-xiaodu-mcp-url" --name xiaodu`
    - IoT：`mcporter list --stdio npx --stdio-arg -y --stdio-arg dueros-iot-mcp --env ACCESS_TOKEN=... --name xiaodu-iot --schema`
@@ -62,10 +58,6 @@ metadata: {"openclaw":{"emoji":"📺","homepage":"https://github.com/dueros-mcp/
 - 控制家电：`bash scripts/control_iot.sh`
 - 查场景：`bash scripts/list_scenes.sh`
 - 触发场景：`bash scripts/trigger_scene.sh`
-
-### Token 刷新
-
-- 刷新平台 token 并回写配置：`bash scripts/refresh_xiaodu_mcp_token.sh`
 
 ## 关键路由规则
 
@@ -108,13 +100,11 @@ metadata: {"openclaw":{"emoji":"📺","homepage":"https://github.com/dueros-mcp/
   - 封装 `GET_ALL_SCENES`，用于读取可用场景。
 - `scripts/trigger_scene.sh`
   - 封装 `TRIGGER_SCENES`，用于触发指定场景。
-- `scripts/refresh_xiaodu_mcp_token.sh`
-  - 用 `refresh_token` 刷新小度 MCP 平台 `ACCESS_TOKEN`，并按配置里的 `targets` 自动回写 `mcporter` 配置。默认模板会同时更新 `xiaodu` 和 `xiaodu-iot`。
 
 ## 按需阅读引用文档
 
-- 安装、鉴权、模板、token 刷新：读 [references/install-for-users.md](references/install-for-users.md)。
-- 直接给用户模板：读 [references/mcporter.template.json](references/mcporter.template.json) 和 [references/xiaodu-mcp-oauth.template.json](references/xiaodu-mcp-oauth.template.json)。
+- 安装、鉴权、`mcporter` 配置：读 [references/install-for-users.md](references/install-for-users.md)。
+- 直接给用户模板：读 [references/mcporter.template.json](references/mcporter.template.json)。
 - 精确 CLI 示例：读 [references/command-patterns.md](references/command-patterns.md)。
 - 中文聊天模板：读 [references/prompt-templates.md](references/prompt-templates.md)。
 - 功能验证：读 [references/test-cases.md](references/test-cases.md)。

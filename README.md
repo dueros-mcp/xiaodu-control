@@ -7,7 +7,6 @@
 - 设备发现与解析
 - 文本播报、语音指令、拍照、资源推送
 - IoT 家电控制与场景触发
-- 小度 MCP 平台 token 刷新
 
 这个仓库是 skill 的源码仓库；实际给 OpenClaw 使用的入口文件是 [SKILL.md](./SKILL.md)。
 
@@ -21,7 +20,6 @@
 - 给智能屏推送图片、图片+背景音、视频、音频
 - 通过 `xiaodu-iot` 控制灯、空调、窗帘、电视等 IoT 设备
 - 获取 IoT 设备状态、场景列表并触发场景
-- 刷新小度 MCP 平台 OAuth token，并回写 `mcporter` 配置
 
 ## 适用前提
 
@@ -29,11 +27,11 @@
 
 - 已安装 OpenClaw
 - 已安装 `mcporter`
+- 如果要使用 `xiaodu-iot`，还需要可用的 `npx` / Node.js 运行时
 - 已从小度平台拿到真实的智能屏 MCP 地址
 - 已具备一个可用的小度 MCP 平台 `ACCESS_TOKEN`
-- 如果要长期使用 IoT，还需要 `AppKey`、`SecretKey`、`refresh_token`
 
-通常情况下，`xiaodu` 和 `xiaodu-iot` 可以复用同一个小度 MCP 平台 `ACCESS_TOKEN`。本仓库里的模板和刷新逻辑默认会把同一个 token 同时写入这两个 server。
+通常情况下，`xiaodu` 和 `xiaodu-iot` 可以复用同一个小度 MCP 平台 `ACCESS_TOKEN`。这套公开 skill 假设 token 管理由平台侧或部署方在 skill 之外完成。
 
 ## 快速开始
 
@@ -60,9 +58,6 @@ clawhub install xiaodu-control
 3. 点击“调试授权”
 4. 拿到：
    - `ACCESS_TOKEN`
-   - `AppKey`
-   - `SecretKey`
-   - `refresh_token`
 
 如果你接的是当前这套小度智能终端 MCP，智能屏 MCP 地址通常直接填：
 
@@ -77,30 +72,17 @@ https://xiaodu.baidu.com/dueros_mcp_server/mcp/
 先按模板填写：
 
 - [`references/mcporter.template.json`](./references/mcporter.template.json)
-- [`references/xiaodu-mcp-oauth.template.json`](./references/xiaodu-mcp-oauth.template.json)
 
 默认配置路径：
 
 - `~/.mcporter/mcporter.json`
-- `~/.mcporter/xiaodu-mcp-oauth.json`
 
-这里要分清谁在读哪个文件：
+这里要分清角色：
 
 - `~/.mcporter/mcporter.json`
   - 这是 `mcporter` 的系统配置默认路径，`mcporter list/call/auth` 会直接读取它。
-- `~/.mcporter/xiaodu-mcp-oauth.json`
-  - 这是这套 skill 默认使用的“小度 MCP 平台 OAuth 凭据文件”路径。
-  - 它不是平台强制名称，也不是 `mcporter` 固定要求的名字；默认是刷新脚本在读取它。
-  - 如果你想放在别处，也可以，只要执行刷新脚本时通过 `--config` 指到真实路径，或设置环境变量 `XIAODU_MCP_OAUTH_CONFIG=/实际路径`。
-
-另外，OAuth 文件里的 `mcporter_config` 字段才决定“刷新后把 token 回写到哪一个 mcporter.json”。如果你的 `mcporter` 也用了自定义路径，这里要填成你的真实路径。
-
-刷新脚本对 OAuth 凭据文件本身的默认行为是：
-
-- 默认回写 `~/.mcporter/xiaodu-mcp-oauth.json`
-- 如果新文件不存在但旧文件 `~/.mcporter/xiaodu-iot-oauth.json` 还在，会回退并写回旧文件
-- 如果新旧两个默认文件都存在，会把另一份也同步，避免内容分叉
-- 如果你用 `--config` 或 `XIAODU_MCP_OAUTH_CONFIG` 指了自定义路径，脚本会以你指定的那份文件为主进行回写
+- 这套公开 skill 只依赖已经存在的 `mcporter` 配置，不负责刷新或回写 token。
+- 如果你的平台侧有 token 刷新逻辑，应在 skill 之外维护，并在 token 变化后同步更新 `mcporter.json`。
 
 详细步骤见：
 
@@ -150,7 +132,6 @@ IoT 控制建议把链路说清楚：
 - `bash scripts/list_iot_devices.sh`
 - `bash scripts/list_scenes.sh`
 - `bash scripts/trigger_scene.sh`
-- `bash scripts/refresh_xiaodu_mcp_token.sh`
 
 精确命令示例见：
 
@@ -169,8 +150,7 @@ xiaodu-control/
 │   ├── prompt-templates.md
 │   ├── test-cases.md
 │   ├── troubleshooting.md
-│   ├── mcporter.template.json
-│   └── xiaodu-mcp-oauth.template.json
+│   └── mcporter.template.json
 └── scripts/
     ├── *.sh
     └── *.py
@@ -196,6 +176,6 @@ xiaodu-control/
 
 ## 安全提醒
 
-- 不要把真实的 `ACCESS_TOKEN`、`AppKey`、`SecretKey`、`refresh_token` 提交到仓库
+- 不要把真实的 `ACCESS_TOKEN` 提交到仓库
 - 不要把本机私有路径、账号信息、测试截图、缓存文件一起发布
-- 自动刷新只应写回用户本机自己的 `~/.mcporter/` 配置
+- 如果平台需要自动刷新 token，请在公开 skill 之外完成

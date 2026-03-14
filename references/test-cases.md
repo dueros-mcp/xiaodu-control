@@ -1,11 +1,13 @@
-# 智能屏测试用例
+# 小度 MCP 测试用例
 
-这份清单只覆盖当前已经接通的 `xiaodu` 智能屏 MCP，不包含 `xiaodu-iot`。
+这份清单覆盖当前已经接通的 `xiaodu` 智能屏 MCP 与 `xiaodu-iot`，用于验证这套 skill 的主要公开能力。
 
 ## 测试前提
 
-- 先确认 `xiaodu` 已可用。
+- 先确认 `xiaodu` 和 `xiaodu-iot` 都已可用。
 - 确认手边那台设备的设备名、`cuid`、`client_id` 已能从设备列表拿到。
+- 确认至少有一个可控的 IoT 设备名；如果需要按房间控制，也提前确认房间名。
+- 确认至少有一个可触发的场景名。
 - 建议固定用同一台设备做整轮测试，避免结果混淆。
 - 如果通过聊天入口执行这些测试，默认要求 agent 优先调用本 skill 自带脚本，不要直接跳到底层工具。
 
@@ -18,6 +20,7 @@
 5. 拍照
 6. 资源推送
 7. 异常与边界
+8. IoT 设备与场景
 
 ## 一、只读检查
 
@@ -224,6 +227,77 @@
 - 预期：
   - 如果脚本层异常但 CLI 成功，说明问题在 skill/脚本层，不在 MCP 本身
 
+## 八、IoT 设备与场景
+
+### TC-26 IoT schema 可读
+- 目标：确认 `xiaodu-iot` 暴露的工具集合稳定。
+- 命令：
+  - `mcporter list xiaodu-iot --schema`
+- 预期：
+  - 至少看到 `GET_ALL_DEVICES_WITH_STATUS`、`IOT_CONTROL_DEVICES`、`GET_ALL_SCENES`、`TRIGGER_SCENES`
+
+### TC-27 IoT 设备列表可读
+- 目标：确认 IoT 设备和状态查询正常。
+- 命令：
+  - `bash scripts/list_iot_devices.sh --server xiaodu-iot`
+- 预期：
+  - 返回设备列表
+  - 每个设备至少包含设备名或可识别的家电标识
+
+### TC-28 IoT 设备列表可落盘
+- 目标：确认 IoT 只读结果可以稳定落盘复查。
+- 命令：
+  - `bash scripts/list_iot_devices.sh --server xiaodu-iot --out /tmp/xiaodu-iot-devices.json`
+- 预期：
+  - 命令成功
+  - 输出文件存在且非空
+
+### TC-29 IoT 基础开关控制
+- 目标：验证 `IOT_CONTROL_DEVICES` 的基础动作可用。
+- 命令：
+  - `bash scripts/control_iot.sh --server xiaodu-iot --action turnOn --device "射灯"`
+- 预期：
+  - 对应设备状态发生变化，或返回明确成功结果
+
+### TC-30 IoT 属性设置
+- 目标：验证带属性和值的控制动作可用。
+- 命令：
+  - `bash scripts/control_iot.sh --server xiaodu-iot --action set --device "射灯" --attribute brightness --value 30`
+- 预期：
+  - 请求成功
+  - 不出现缺少 `attribute/value` 的参数错误
+
+### TC-31 场景列表可读
+- 目标：确认可触发场景可枚举。
+- 命令：
+  - `bash scripts/list_scenes.sh --server xiaodu-iot`
+- 预期：
+  - 返回场景列表
+  - 至少能识别出一个后续可触发的场景名
+
+### TC-32 触发场景
+- 目标：验证场景触发链路可用。
+- 命令：
+  - `bash scripts/trigger_scene.sh --server xiaodu-iot --scene-name "回家"`
+- 预期：
+  - 场景被触发，或返回明确成功结果
+
+### TC-33 IoT 缺少设备名时应失败
+- 目标：确认脚本会拦截缺少 `applianceName` 的无效输入。
+- 命令：
+  - `bash scripts/control_iot.sh --server xiaodu-iot --action turnOn`
+- 预期：
+  - 本地直接报错
+  - 明确提示必须提供 `--device`
+
+### TC-34 场景缺少名称时应失败
+- 目标：确认脚本会拦截缺少场景名的无效输入。
+- 命令：
+  - `bash scripts/trigger_scene.sh --server xiaodu-iot`
+- 预期：
+  - 本地直接报错
+  - 明确提示必须提供 `--scene-name`
+
 ## 推荐记录方式
 
 每条测试至少记录这 4 项：
@@ -234,7 +308,6 @@
 
 ## 当前未纳入本轮的内容
 
-- `xiaodu-iot` 相关测试
 - 多设备并发测试
 - 长时间稳定性压测
 - 弱网或离线恢复测试
