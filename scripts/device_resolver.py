@@ -43,8 +43,15 @@ def match_devices(devices, device_name: str, include_offline: bool):
     ]
 
 
-def shell_escape(value: str) -> str:
-    return "'" + value.replace("'", "'\"'\"'") + "'"
+def emit_nul_payload(payload):
+    values = (
+        payload["device_name"],
+        payload["cuid"],
+        payload["client_id"],
+    )
+    for value in values:
+        sys.stdout.buffer.write(str(value).encode("utf-8"))
+        sys.stdout.buffer.write(b"\0")
 
 
 def main():
@@ -54,7 +61,7 @@ def main():
     parser.add_argument("--cuid")
     parser.add_argument("--client-id")
     parser.add_argument("--include-offline", action="store_true")
-    parser.add_argument("--format", choices=("json", "shell"), default="json")
+    parser.add_argument("--format", choices=("json", "nul"), default="json")
     args = parser.parse_args()
 
     if args.cuid and args.client_id and not args.device_name:
@@ -96,9 +103,7 @@ def main():
         print(json.dumps(payload, ensure_ascii=False))
         return
 
-    print(f"DEVICE_NAME={shell_escape(payload['device_name'])}")
-    print(f"CUID={shell_escape(payload['cuid'])}")
-    print(f"CLIENT_ID={shell_escape(payload['client_id'])}")
+    emit_nul_payload(payload)
 
 
 if __name__ == "__main__":

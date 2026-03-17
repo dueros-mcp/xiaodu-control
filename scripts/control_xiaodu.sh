@@ -18,6 +18,28 @@ DEVICE_NAME=""
 CUID=""
 CLIENT_ID=""
 
+resolve_device_identifiers() {
+  local resolved_fields=()
+  local field=""
+  while IFS= read -r -d '' field; do
+    resolved_fields+=("$field")
+  done < <(
+    python3 "$(dirname "$0")/device_resolver.py" \
+      --server "$SERVER" \
+      --device-name "$DEVICE_NAME" \
+      --format nul
+  )
+
+  if [[ "${#resolved_fields[@]}" -ne 3 ]]; then
+    echo "设备解析返回了意外字段数: ${#resolved_fields[@]}" >&2
+    exit 1
+  fi
+
+  DEVICE_NAME="${resolved_fields[0]}"
+  CUID="${resolved_fields[1]}"
+  CLIENT_ID="${resolved_fields[2]}"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --server)
@@ -70,12 +92,7 @@ if ! command -v mcporter >/dev/null 2>&1; then
 fi
 
 if [[ -n "$DEVICE_NAME" ]]; then
-  eval "$(
-    python3 "$(dirname "$0")/device_resolver.py" \
-      --server "$SERVER" \
-      --device-name "$DEVICE_NAME" \
-      --format shell
-  )"
+  resolve_device_identifiers
 fi
 
 mcporter call "${SERVER}.control_xiaodu" "command=$COMMAND" "cuid=$CUID" "client_id=$CLIENT_ID"
