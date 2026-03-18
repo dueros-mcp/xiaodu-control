@@ -4,4 +4,4 @@ interface:
   default_prompt: "使用 $xiaodu-control 检查小度 MCP 配置、列出设备，并根据设备类型执行智能屏或 xiaodu-iot 控制。"
 
 policy:
-  allow_implicit_invocation: true
+  allow_implicit_invocation: false

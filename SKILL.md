@@ -1,7 +1,7 @@
 ---
 name: xiaodu-control
 description: 当用户要连接、验证、排障或控制小度智能屏 MCP 与小度 IoT MCP 时使用，包括配置 mcporter、列设备、文本播报、语音指令、拍照、资源推送、IoT 家电控制与场景触发。
-metadata: {"openclaw":{"emoji":"📺","homepage":"https://github.com/dueros-mcp/xiaodu-control","requires":{"bins":["mcporter","python3","bash","npx"]}}}
+metadata: {"openclaw":{"emoji":"📺","homepage":"https://github.com/dueros-mcp/xiaodu-control","requires":{"bins":["mcporter","python3","bash","npx"],"env":["ACCESS_TOKEN"]}}}
 ---
 
 # xiaodu-control
