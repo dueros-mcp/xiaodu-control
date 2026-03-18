@@ -22,6 +22,7 @@
 - 如果还不知道设备名，先让它刷新设备列表，不要直接播报或拍照。
 - 如果结果为空，要求它回退到直接的 `mcporter call` 或本 skill 脚本。
 - 没有 `xiaodu-iot` 时，不要让它硬做 IoT 控制。
+- 涉及“能否控制某类设备”或“请求是否越界”时，先按 [capability-boundaries.md](capability-boundaries.md) 判断，再执行或拒绝。
 - 默认要求它优先使用本 skill 自带脚本，不要直接调用底层工具；只有在你明确要求 direct CLI 时才绕过脚本。
 - 用户要控制灯、空调、窗帘、电视、插座等 IoT 设备时，明确要求它优先走 `xiaodu-iot`，不要走智能屏的 `control_xiaodu` 语音控制。
 

@@ -1,6 +1,6 @@
 ---
 name: xiaodu-control
-description: 当用户要连接、验证、排障或控制小度智能屏 MCP 与小度 IoT MCP 时使用，包括配置 mcporter、列设备、文本播报、语音指令、拍照、资源推送、IoT 家电控制与场景触发。
+description: 当用户要连接、验证、排障或控制小度智能屏 MCP 与小度 IoT MCP 时使用，包括配置 mcporter、列设备、文本播报、语音指令、拍照、资源推送，以及灯光/空调/风扇/窗帘/电视机顶盒/投影/扫地机/门锁等 IoT 控制与场景触发。
 metadata: {"openclaw":{"emoji":"📺","homepage":"https://github.com/dueros-mcp/xiaodu-control","requires":{"bins":["mcporter","python3","bash","npx"],"env":["ACCESS_TOKEN"]}}}
 ---
 
@@ -25,6 +25,21 @@ metadata: {"openclaw":{"emoji":"📺","homepage":"https://github.com/dueros-mcp/
 - `control_xiaodu` 只用于智能屏语音助手类请求，例如播放音乐、暂停、天气、新闻。
 - 排障时，用 `mcporter list ... --schema` 和 direct `mcporter call` 对照 skill 行为。
 - 不要把密钥写进 workspace 文件或聊天记录；优先写入 `mcporter` 配置或 auth 存储。
+- 执行控制前，先看 [references/capability-boundaries.md](references/capability-boundaries.md)；其中定义了“稳定支持”“条件支持”和“明确不支持”的能力边界。
+
+## 音像与 IoT 能力速览
+
+- 稳定支持：
+  - 智能屏：播报、语音指令、拍照、推送图片/视频/音频。
+  - IoT 基础控制：开/关、查询状态、设置温度/亮度/色温/颜色/风速/风向/档位、触发场景。
+- 条件支持（依赖设备实际 schema 和属性名）：
+  - 电视/机顶盒/投影/音箱：频道、音量、静音、信号源、模式、投屏相关操作。
+  - 扫地机/吸尘器：吸力、水量、区域清扫、回充、暂停/继续。
+  - 门锁/插座/热水器/净化器/加湿器等：定时、模式、档位与状态查询。
+- 明确边界：
+  - 若 `xiaodu-iot` 设备列表里没有目标设备，不执行控制。
+  - 若 schema 没有对应属性或动作，不脑补参数，先告知用户不支持。
+  - 打印、乘梯、车控、非智能家居类请求默认不在本 skill 范围内，除非设备列表中确实存在对应可控设备。
 
 ## 标准流程
 
@@ -105,6 +120,7 @@ metadata: {"openclaw":{"emoji":"📺","homepage":"https://github.com/dueros-mcp/
 
 - 安装、鉴权、`mcporter` 配置：读 [references/install-for-users.md](references/install-for-users.md)。
 - 直接给用户模板：读 [references/mcporter.template.json](references/mcporter.template.json)。
+- 能力分类与边界：读 [references/capability-boundaries.md](references/capability-boundaries.md)。
 - 精确 CLI 示例：读 [references/command-patterns.md](references/command-patterns.md)。
 - 中文聊天模板：读 [references/prompt-templates.md](references/prompt-templates.md)。
 - 功能验证：读 [references/test-cases.md](references/test-cases.md)。
